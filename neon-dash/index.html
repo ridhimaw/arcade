@@ -4,9 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="description" content="Neon Dash — an endless runner. Jump, double-jump, grab coins, don't crash.">
+<meta name="theme-color" content="#12052b">
 <title>Neon Dash</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #12052b; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+  html, body { margin: 0; height: 100%; background: #12052b; overflow: hidden; touch-action: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
   canvas { display: block; cursor: pointer; }
   .home { position: fixed; left: 12px; bottom: 12px; padding: 8px 14px; border-radius: 999px; font: 600 13px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: #f3eaff; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); text-decoration: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   .home:hover { background: rgba(255,255,255,0.2); }
@@ -18,6 +19,7 @@
 <script>
 const c = document.getElementById('c'), g = c.getContext('2d');
 const FONT = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+const TAP = matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Tap or press Space';
 
 // ---------- Layout ----------
 let W, H, U, groundY, hills = [];
@@ -196,7 +198,7 @@ function update(dt) {
 
 // ---------- Draw ----------
 function text(str, x, y, sz, color, weight = 700) {
-  g.font = `${weight} ${Math.round(sz)}px ${FONT}`;
+  g.font = `${weight} ${Math.round(Math.max(12, sz))}px ${FONT}`;
   g.fillStyle = color; g.fillText(str, x, y);
 }
 
@@ -301,10 +303,13 @@ function draw() {
     g.shadowColor = '#ff4fb4'; g.shadowBlur = 20;
     text('NEON DASH', W / 2, H * 0.2, 46 * U, '#fff0fb', 900);
     g.shadowBlur = 0;
-    text('Jump the blocks · grab the coins · tap twice to double-jump', W / 2, H * 0.2 + 40 * U, 14 * U, 'rgba(243,234,255,0.75)', 500);
+    if (W < 560) {
+      text('Jump the blocks · grab the coins', W / 2, H * 0.2 + 40 * U, 14 * U, 'rgba(243,234,255,0.75)', 500);
+      text('Tap twice to double-jump', W / 2, H * 0.2 + 60 * U, 14 * U, 'rgba(243,234,255,0.75)', 500);
+    } else text('Jump the blocks · grab the coins · tap twice to double-jump', W / 2, H * 0.2 + 40 * U, 14 * U, 'rgba(243,234,255,0.75)', 500);
     const pulse = 0.6 + 0.4 * Math.sin(time * 4);
-    text('Tap or press Space to run', W / 2, groundY + (H - groundY) * 0.5, 16 * U, `rgba(243,234,255,${pulse})`, 600);
-    if (best) text('Best: ' + best, W / 2, H * 0.2 + 66 * U, 14 * U, '#ffe066', 600);
+    text(TAP + ' to run', W / 2, groundY + (H - groundY) * 0.5, 16 * U, `rgba(243,234,255,${pulse})`, 600);
+    if (best) text('Best: ' + best, W / 2, H * 0.2 + (W < 560 ? 88 : 66) * U, 14 * U, '#ffe066', 600);
   } else {
     g.textAlign = 'right';
     text(score(), W - 18, 34 * U, 34 * U, '#ffffff', 800);
@@ -322,7 +327,7 @@ function draw() {
     text(newBest ? '★ New best!' : 'Best ' + best, W / 2, H * 0.3 + 74 * U, 16 * U, '#ffe066', 600);
     if (deadT > 0.6) {
       const pulse = 0.6 + 0.4 * Math.sin(time * 4);
-      text('Tap or press Space to run again', W / 2, H * 0.3 + 116 * U, 16 * U, `rgba(243,234,255,${pulse})`, 600);
+      text(TAP + ' to run again', W / 2, H * 0.3 + 116 * U, 16 * U, `rgba(243,234,255,${pulse})`, 600);
     }
   }
   if (muted) { g.textAlign = 'left'; text('muted (M)', 16, 42, 13 * U, 'rgba(243,234,255,0.55)', 600); }
