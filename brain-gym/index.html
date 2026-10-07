@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="description" content="Brain Gym — a 5-minute daily workout for speed, memory, focus and flexibility, with difficulty that adapts to you.">
+<meta name="theme-color" content="#0e1324">
+<title>Brain Gym</title>
+<style>
+  :root {
+    --bg: #0e1324; --card: #18203a; --card2: #212b4b; --line: rgba(255,255,255,0.09);
+    --text: #eef2ff; --muted: #9aa6c8; --accent: #3dd6b0; --accent-ink: #062a22;
+    --good: #3ddc84; --bad: #ff5a5f; --gold: #ffd479;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh; background: radial-gradient(900px 500px at 50% -10%, #16304a 0%, transparent 65%), var(--bg);
+    color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
+  }
+  #app { max-width: 560px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 40px; margin: 8px 0 6px; font-weight: 900; letter-spacing: -0.02em; }
+  h2 { font-size: 26px; margin: 0 0 8px; font-weight: 800; }
+  p { line-height: 1.5; }
+  .muted { color: var(--muted); }
+  .center { text-align: center; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; }
+  .btn { display: block; width: 100%; min-height: 54px; border-radius: 14px; font-size: 17px; font-weight: 800; background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 700; }
+  .btn:active { transform: scale(0.98); }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  .stack > * + * { margin-top: 12px; }
+
+  /* home */
+  .week { display: flex; justify-content: space-between; gap: 6px; margin-top: 14px; }
+  .day { flex: 1; text-align: center; font-size: 12px; color: var(--muted); }
+  .day i { display: block; height: 30px; border-radius: 8px; margin-top: 6px; background: var(--card2); border: 1px solid var(--line); }
+  .day.on i { background: var(--accent); border-color: var(--accent); }
+  .day.today { color: var(--text); font-weight: 700; }
+  .streak { display: flex; align-items: baseline; justify-content: space-between; }
+  .streak b { font-size: 28px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tile { text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; min-height: 128px; display: flex; flex-direction: column; gap: 4px; }
+  .tile:active { transform: scale(0.98); }
+  .tile .ic { font-size: 22px; line-height: 1; margin-bottom: 4px; }
+  .tile b { font-size: 16px; }
+  .tile span { font-size: 13px; color: var(--muted); line-height: 1.35; flex: 1; }
+  .tile em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--gold); }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 4px 18px; }
+  summary { cursor: pointer; padding: 14px 0; font-weight: 700; }
+  details p, details li { color: var(--muted); font-size: 14px; }
+  details a { color: var(--accent); }
+  details ul { padding-left: 18px; }
+
+  /* play */
+  .hud { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--muted); margin-bottom: 12px; min-height: 22px; }
+  .hud b { color: var(--text); }
+  .bar { height: 6px; border-radius: 3px; background: var(--card2); overflow: hidden; margin-bottom: 16px; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width 0.2s linear; }
+  .prompt { text-align: center; font-size: 18px; font-weight: 700; min-height: 28px; margin: 14px 0; }
+  .flash-good { color: var(--good); } .flash-bad { color: var(--bad); }
+
+  .field { position: relative; width: min(92vw, 380px); aspect-ratio: 1; margin: 0 auto; border-radius: 50%; background: radial-gradient(circle, #1b2647 0%, #121a33 70%); border: 1px solid var(--line); }
+  .slot { position: absolute; width: 17%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 12px; display: grid; place-items: center; }
+  .slot.pick { background: rgba(255,255,255,0.07); border: 1px dashed rgba(255,255,255,0.25); cursor: pointer; }
+  .slot.right { background: rgba(61,220,132,0.3); border: 2px solid var(--good); }
+  .slot.wrong { background: rgba(255,90,95,0.3); border: 2px solid var(--bad); }
+  .slot svg, .mid svg { width: 70%; height: 70%; }
+  .mid { position: absolute; left: 50%; top: 50%; width: 20%; aspect-ratio: 1; transform: translate(-50%, -50%); display: grid; place-items: center; font-size: 28px; color: var(--muted); }
+  .mask { width: 100%; height: 100%; border-radius: 10px; background: repeating-linear-gradient(45deg, #8b97c0 0 3px, #1b2647 3px 7px), repeating-linear-gradient(-45deg, #8b97c0 0 3px, transparent 3px 7px); background-blend-mode: screen; }
+  .choices { display: flex; gap: 12px; justify-content: center; }
+  .choice { width: 96px; height: 96px; border-radius: 18px; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; }
+  .choice svg { width: 56px; height: 56px; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: min(92vw, 380px); margin: 0 auto; }
+  .cell { aspect-ratio: 1; border-radius: 14px; background: var(--card); border: 1px solid var(--line); transition: background 0.12s; }
+  .cell.lit { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 24px rgba(61,214,176,0.5); }
+  .cell.tap { background: #6b7bb0; }
+  .cell.bad { background: var(--bad); }
+
+  .word { text-align: center; font-size: clamp(48px, 16vw, 76px); font-weight: 900; letter-spacing: 0.02em; margin: 30px 0 34px; min-height: 90px; }
+  .colors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .colors button { min-height: 72px; border-radius: 16px; font-size: 18px; font-weight: 800; color: #0e1324; }
+
+  .numcard { width: min(80vw, 280px); margin: 18px auto 26px; border-radius: 22px; padding: 18px; text-align: center; border: 3px solid; }
+  .numcard .rule { font-size: 15px; font-weight: 800; letter-spacing: 0.04em; }
+  .numcard .num { font-size: 96px; font-weight: 900; line-height: 1.1; }
+  .ans button { min-height: 72px; border-radius: 16px; font-size: 19px; font-weight: 800; background: var(--card2); border: 1px solid var(--line); }
+
+  .big { font-size: 56px; font-weight: 900; margin: 6px 0; }
+  .badge { display: inline-block; font-size: 13px; font-weight: 800; color: var(--accent-ink); background: var(--gold); border-radius: 999px; padding: 4px 10px; }
+  .res { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .res:last-child { border-bottom: 0; }
+  .res b { font-size: 18px; }
+  .res .score { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; padding-left: 12px; }
+
+  .home { display: inline-block; padding: 8px 14px; border-radius: 999px; font: 600 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); background: rgba(14,19,36,0.8); border: 1px solid rgba(255,255,255,0.18); text-decoration: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .quit { background: none; color: var(--muted); font-size: 14px; padding: 4px 0; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+// ================= Storage =================
+const KEY = 'brainGymData';
+let data;
+try { data = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+if (!data || typeof data !== 'object') data = {};
+data.lv = data.lv || { speed: 500, memory: 3 };
+data.best = data.best || {};
+data.hist = data.hist || [];
+data.days = data.days || [];
+function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} }
+
+function dayStr(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function today() { return dayStr(new Date()); }
+function streak() {
+  const set = new Set(data.days); let n = 0; const d = new Date();
+  if (!set.has(dayStr(d))) d.setDate(d.getDate() - 1); // today not done yet: count from yesterday
+  while (set.has(dayStr(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+// ================= Helpers =================
+const app = document.getElementById('app');
+let run = { alive: false };
+const ABORT = 'abort';
+function sleep(ms) { const r = run; return new Promise((res, rej) => setTimeout(() => r.alive ? res() : rej(ABORT), ms)); }
+// show for an exact number of milliseconds, measured from the first painted frame
+function hold(ms) {
+  const r = run;
+  return new Promise((res, rej) => requestAnimationFrame(t0 => {
+    (function f(now) { if (!r.alive) return rej(ABORT); if (now - t0 >= ms - 8) res(); else requestAnimationFrame(f); })(t0);
+  }));
+}
+function rnd(n) { return Math.floor(Math.random() * n); }
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function h(html) { app.innerHTML = html; window.scrollTo(0, 0); }
+
+let ac = null;
+function beep(f, d = 0.09, v = 0.05) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+    o.frequency.value = f; o.type = 'sine';
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d);
+  } catch (e) {}
+}
+const good = () => beep(880), bad = () => beep(220, 0.15);
+
+const SVG = {
+  circle: '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="#4ea8ff"/></svg>',
+  diamond: '<svg viewBox="0 0 40 40"><path d="M20 3 L37 20 L20 37 L3 20Z" fill="#ff9f43"/></svg>',
+  star: '<svg viewBox="0 0 40 40"><path d="M20 3l5 11 12 1.5-9 8 2.6 12L20 29.5 9.4 35.5 12 23.5l-9-8L15 14z" fill="#ffd23f"/></svg>',
+  square: '<svg viewBox="0 0 40 40"><rect x="8" y="8" width="24" height="24" rx="3" fill="#8b97c0"/></svg>'
+};
+
+// ================= Exercises =================
+const EX = [
+  { id: 'speed', icon: '⚡', name: 'Speed Spotter', trains: 'Processing speed & wide attention',
+    how: 'A shape flashes in the middle and a star flashes somewhere around it. Say which shape was in the middle, then tap where the star was. Get it right and the next flash is shorter.',
+    lower: true, fmt: s => s + ' ms', play: playSpeed },
+  { id: 'memory', icon: '🧩', name: 'Memory Grid', trains: 'Working memory',
+    how: 'Squares light up one after another. Tap them back in the same order. Each success adds one more square.',
+    fmt: s => s + ' squares', play: playMemory },
+  { id: 'stroop', icon: '🎨', name: 'Color Clash', trains: 'Focus & self-control',
+    how: 'A colour word appears in a different ink colour. Tap the INK colour, not the word. As many as you can in 45 seconds.',
+    fmt: s => s + ' points', play: playStroop },
+  { id: 'switch', icon: '🔀', name: 'Rule Switch', trains: 'Mental flexibility',
+    how: 'A number appears with a rule. Blue card: is it odd or even? Orange card: is it below or above 5? The rule keeps changing. 45 seconds.',
+    fmt: s => s + ' points', play: playSwitch }
+];
+const byId = id => EX.find(e => e.id === id);
+
+// ---------- Speed Spotter (based on the "useful field of view" speed task) ----------
+async function playSpeed() {
+  const TRIALS = 12;
+  let T = Math.round(data.lv.speed || 500), right = 0, bestT = T;
+  const pos = [...Array(8)].map((_, k) => { const a = k * Math.PI / 4 - Math.PI / 2; return [50 + Math.cos(a) * 37, 50 + Math.sin(a) * 37]; });
+  h(`<div class="hud"><span><button class="quit" onclick="home()">✕</button>&nbsp; ⚡ Speed Spotter</span><span id="info"></span></div><div class="bar"><i id="bar"></i></div>
+     <div class="field" id="field">${pos.map((p, k) => `<div class="slot" data-k="${k}" style="left:${p[0]}%;top:${p[1]}%"></div>`).join('')}<div class="mid" id="mid"></div></div>
+     <div class="prompt" id="prompt"></div><div id="q"></div>`);
+  const slots = [...document.querySelectorAll('.slot')], mid = document.getElementById('mid');
+  const prompt = document.getElementById('prompt'), q = document.getElementById('q');
+
+  for (let i = 0; i < TRIALS; i++) {
+    document.getElementById('info').innerHTML = `Round <b>${i + 1}</b>/${TRIALS} · flash <b>${T} ms</b>`;
+    document.getElementById('bar').style.width = (i / TRIALS * 100) + '%';
+    const centre = rnd(2) ? 'circle' : 'diamond', target = rnd(8);
+    const nDis = T > 300 ? 0 : T > 150 ? 3 : 7;
+    const dis = shuffle([...Array(8).keys()].filter(k => k !== target)).slice(0, nDis);
+    slots.forEach(s => { s.className = 'slot'; s.innerHTML = ''; });
+    q.innerHTML = ''; prompt.textContent = 'Watch the centre…'; prompt.className = 'prompt';
+    mid.innerHTML = '+';
+    await sleep(700);
+    mid.innerHTML = SVG[centre];
+    slots[target].innerHTML = SVG.star;
+    dis.forEach(k => slots[k].innerHTML = SVG.square);
+    await hold(T);
+    mid.innerHTML = '<div class="mask"></div>';
+    slots.forEach(s => s.innerHTML = '<div class="mask"></div>');
+    await hold(250);
+    mid.innerHTML = '?';
+    slots.forEach(s => s.innerHTML = '');
+
+    prompt.textContent = 'What was in the middle?';
+    q.innerHTML = `<div class="choices"><button class="choice" data-v="circle">${SVG.circle}</button><button class="choice" data-v="diamond">${SVG.diamond}</button></div>`;
+    const c = await new Promise(res => q.querySelectorAll('.choice').forEach(b => b.onclick = () => res(b.dataset.v)));
+    if (!run.alive) throw ABORT;
+    q.innerHTML = ''; mid.innerHTML = SVG[c];
+    prompt.textContent = 'Where was the star? Tap its spot.';
+    slots.forEach(s => s.classList.add('pick'));
+    const p = await new Promise(res => slots.forEach(s => s.onclick = () => res(+s.dataset.k)));
+    if (!run.alive) throw ABORT;
+    slots.forEach(s => { s.onclick = null; s.classList.remove('pick'); });
+
+    const ok = c === centre && p === target;
+    slots[target].classList.add('right'); slots[target].innerHTML = SVG.star;
+    if (p !== target) slots[p].classList.add('wrong');
+    mid.innerHTML = SVG[centre];
+    if (ok) { right++; good(); prompt.textContent = 'Correct! Faster next time.'; prompt.className = 'prompt flash-good'; T = Math.max(34, Math.round(T * 0.85)); bestT = Math.min(bestT, T); }
+    else { bad(); prompt.textContent = c !== centre ? 'Missed the middle shape — a bit slower now.' : 'Missed the star — a bit slower now.'; prompt.className = 'prompt flash-bad'; T = Math.min(1000, Math.round(T * 1.25)); }
+    await sleep(1000);
+  }
+  data.lv.speed = T;
+  return { score: bestT, sub: `${right}/${TRIALS} rounds correct · fastest flash you got right` };
+}
+
+// ---------- Memory Grid (Corsi-style span task) ----------
+async function playMemory() {
+  const TRIALS = 8;
+  let span = Math.max(2, data.lv.memory || 3), fails = 0, maxOk = 0, waiter = null;
+  h(`<div class="hud"><span><button class="quit" onclick="home()">✕</button>&nbsp; 🧩 Memory Grid</span><span id="info"></span></div><div class="bar"><i id="bar"></i></div>
+     <div class="grid" id="grid">${[...Array(16)].map((_, i) => `<button class="cell" data-i="${i}" aria-label="square ${i + 1}"></button>`).join('')}</div>
+     <div class="prompt" id="prompt"></div>`);
+  const cells = [...document.querySelectorAll('.cell')], prompt = document.getElementById('prompt');
+  cells.forEach(c => c.onclick = () => { if (waiter) { const w = waiter; waiter = null; w(+c.dataset.i); } });
+
+  for (let t = 0; t < TRIALS; t++) {
+    document.getElementById('info').innerHTML = `Round <b>${t + 1}</b>/${TRIALS} · <b>${span}</b> squares`;
+    document.getElementById('bar').style.width = (t / TRIALS * 100) + '%';
+    const seq = shuffle([...Array(16).keys()]).slice(0, span);
+    prompt.textContent = 'Watch…'; prompt.className = 'prompt';
+    await sleep(700);
+    for (const i of seq) { cells[i].classList.add('lit'); beep(520 + i * 20, 0.08, 0.03); await sleep(550); cells[i].classList.remove('lit'); await sleep(200); }
+    prompt.textContent = 'Your turn — tap them in order';
+    let ok = true;
+    for (let k = 0; k < seq.length; k++) {
+      const i = await new Promise(res => waiter = res);
+      if (!run.alive) throw ABORT;
+      if (i !== seq[k]) { cells[i].classList.add('bad'); ok = false; break; }
+      cells[i].classList.add('tap'); beep(520 + i * 20, 0.06, 0.03);
+      setTimeout(() => cells[i].classList.remove('tap'), 180);
+    }
+    waiter = null;
+    if (ok) { maxOk = Math.max(maxOk, span); good(); prompt.textContent = 'Perfect! One more square next time.'; prompt.className = 'prompt flash-good'; span++; fails = 0; }
+    else {
+      bad(); seq.forEach(i => cells[i].classList.add('lit'));
+      prompt.textContent = 'Not quite — here was the order.'; prompt.className = 'prompt flash-bad';
+      if (++fails >= 2) { span = Math.max(2, span - 1); fails = 0; }
+    }
+    await sleep(1300);
+    cells.forEach(c => c.className = 'cell');
+  }
+  data.lv.memory = Math.max(3, (maxOk || span) - 1);
+  return { score: maxOk, sub: maxOk ? `Longest sequence you remembered` : 'Keep going — it gets easier with practice' };
+}
+
+// ---------- Color Clash (Stroop task) ----------
+const COLORS = [{ n: 'RED', c: '#ff5a5f' }, { n: 'BLUE', c: '#4ea8ff' }, { n: 'GREEN', c: '#3ddc84' }, { n: 'YELLOW', c: '#ffd23f' }];
+async function timed(seconds, setup, trial) {
+  const end = performance.now() + seconds * 1000;
+  let right = 0, wrong = 0, rts = [];
+  setup();
+  const bar = document.getElementById('bar'), info = document.getElementById('info');
+  const tick = setInterval(() => {
+    const left = Math.max(0, end - performance.now());
+    bar.style.width = (100 - left / (seconds * 10)) + '%';
+    info.innerHTML = `<b>${Math.ceil(left / 1000)}</b> s · <b>${right}</b> right`;
+  }, 100);
+  try {
+    while (performance.now() < end) {
+      const r = await trial(end);
+      if (!run.alive) throw ABORT;
+      if (r === null) break;
+      if (r.ok) { right++; rts.push(r.rt); } else wrong++;
+    }
+  } finally { clearInterval(tick); }
+  const avg = rts.length ? Math.round(rts.reduce((a, b) => a + b, 0) / rts.length) : 0;
+  return { right, wrong, avg };
+}
+function answer(buttons, end) {
+  return new Promise(res => {
+    const t0 = performance.now();
+    const to = setTimeout(() => res(null), Math.max(0, end - t0));
+    buttons.forEach(b => b.onclick = () => { clearTimeout(to); res({ v: b.dataset.v, rt: performance.now() - t0 }); });
+  });
+}
+
+async function playStroop() {
+  let word, buttons, fb;
+  const r = await timed(45, () => {
+    h(`<div class="hud"><span><button class="quit" onclick="home()">✕</button>&nbsp; 🎨 Color Clash</span><span id="info"></span></div><div class="bar"><i id="bar"></i></div>
+       <div class="prompt muted">Tap the colour of the INK</div><div class="word" id="word"></div>
+       <div class="colors">${shuffle([...COLORS]).map(c => `<button data-v="${c.n}" style="background:${c.c}">${c.n}</button>`).join('')}</div>
+       <div class="prompt" id="fb"></div>`);
+    word = document.getElementById('word'); fb = document.getElementById('fb');
+    buttons = [...document.querySelectorAll('.colors button')];
+  }, async end => {
+    const w = COLORS[rnd(4)];
+    let ink = Math.random() < 0.75 ? COLORS.filter(c => c !== w)[rnd(3)] : w;
+    word.textContent = w.n; word.style.color = ink.c;
+    const a = await answer(buttons, end);
+    if (!a) return null;
+    const ok = a.v === ink.n;
+    ok ? good() : bad();
+    fb.textContent = ok ? '✓' : `✗ The ink was ${ink.n.toLowerCase()}`; fb.className = 'prompt ' + (ok ? 'flash-good' : 'flash-bad');
+    word.textContent = '';
+    await sleep(ok ? 150 : 650);
+    return { ok, rt: a.rt };
+  });
+  return { score: Math.max(0, r.right - r.wrong), sub: `${r.right} right · ${r.wrong} wrong · ${r.avg} ms average answer` };
+}
+
+// ---------- Rule Switch (task-switching) ----------
+async function playSwitch() {
+  let card, rule = 0, fb, ansWrap;
+  const RULES = [
+    { label: 'ODD or EVEN?', col: '#4ea8ff', opts: ['Odd', 'Even'], key: n => n % 2 ? 'Odd' : 'Even' },
+    { label: 'BELOW or ABOVE 5?', col: '#ff9f43', opts: ['Below 5', 'Above 5'], key: n => n < 5 ? 'Below 5' : 'Above 5' }
+  ];
+  let switches = 0;
+  const r = await timed(45, () => {
+    h(`<div class="hud"><span><button class="quit" onclick="home()">✕</button>&nbsp; 🔀 Rule Switch</span><span id="info"></span></div><div class="bar"><i id="bar"></i></div>
+       <div class="numcard" id="card"><div class="rule" id="rule"></div><div class="num" id="num"></div></div>
+       <div class="row ans" id="ans"></div><div class="prompt" id="fb"></div>`);
+    card = document.getElementById('card'); fb = document.getElementById('fb'); ansWrap = document.getElementById('ans');
+  }, async end => {
+    if (Math.random() < 0.45) { rule = 1 - rule; switches++; }
+    const R = RULES[rule], n = [1, 2, 3, 4, 6, 7, 8, 9][rnd(8)];
+    card.style.borderColor = R.col; card.style.background = R.col + '22';
+    document.getElementById('rule').textContent = R.label; document.getElementById('rule').style.color = R.col;
+    document.getElementById('num').textContent = n;
+    ansWrap.innerHTML = R.opts.map(o => `<button data-v="${o}">${o}</button>`).join('');
+    const a = await answer([...ansWrap.querySelectorAll('button')], end);
+    if (!a) return null;
+    const ok = a.v === R.key(n);
+    ok ? good() : bad();
+    fb.textContent = ok ? '✓' : `✗ ${n} is ${R.key(n).toLowerCase()}`; fb.className = 'prompt ' + (ok ? 'flash-good' : 'flash-bad');
+    document.getElementById('num').textContent = '';
+    await sleep(ok ? 150 : 700);
+    return { ok, rt: a.rt };
+  });
+  return { score: Math.max(0, r.right - r.wrong), sub: `${r.right} right · ${r.wrong} wrong · ${r.avg} ms average answer` };
+}
+
+// ================= Screens =================
+function isBetter(ex, s, old) { return old === undefined || (ex.lower ? s < old : s > old); }
+
+function home() {
+  run.alive = false;
+  const set = new Set(data.days), days = [];
+  for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
+  const st = streak(), doneToday = set.has(today());
+  h(`<div class="stack">
+    <a class="home" href="../">← All games</a>
+    <div><h1>Brain Gym 🧠</h1><p class="muted" style="margin:0">A 5-minute daily workout. Four exercises, each one gets harder as you get better.</p></div>
+    <div class="card">
+      <div class="streak"><span class="muted">Day streak</span><b>${st} ${st === 1 ? 'day' : 'days'} ${st >= 3 ? '🔥' : ''}</b></div>
+      <div class="week">${days.map(d => `<div class="day ${set.has(dayStr(d)) ? 'on' : ''} ${dayStr(d) === today() ? 'today' : ''}">${d.toLocaleDateString(undefined, { weekday: 'narrow' })}<i></i></div>`).join('')}</div>
+    </div>
+    <button class="btn" id="go">${doneToday ? 'Train again' : "Start today's workout"} · ~5 min</button>
+    <p class="muted center" style="margin:4px 0 0;font-size:14px">Or practise one exercise:</p>
+    <div class="tiles">${EX.map(e => `<button class="tile" data-id="${e.id}"><div class="ic">${e.icon}</div><b>${e.name}</b><span>${e.trains}</span>${data.best[e.id] !== undefined ? `<em>★ Best ${e.fmt(data.best[e.id])}</em>` : '<em style="color:var(--muted);font-weight:500">Not tried yet</em>'}</button>`).join('')}</div>
+    <details>
+      <summary>Does brain training actually work?</summary>
+      <p>Honest answer: it helps some things, but it is not magic.</p>
+      <ul>
+        <li><b>Speed training has the best long-term evidence.</b> In the ACTIVE study, older adults did about 10 sessions of an adaptive speed task like Speed Spotter. Those who also did later "booster" sessions had about 25% fewer dementia diagnoses over 20 years. Memory and reasoning training did not show this effect. That's why Speed Spotter is first, and why coming back regularly matters.</li>
+        <li><b>You mostly get better at what you practise.</b> Large reviews find that memory games (like n-back) improve those tasks, but don't reliably raise general intelligence. Variety helps, so this workout mixes four different skills.</li>
+        <li><b>Difficulty adapts to you.</b> Each exercise gets harder when you succeed and eases off when you miss, so you're always working near your limit.</li>
+        <li><b>The bigger wins are off-screen.</b> The 2024 Lancet Commission lists 14 changeable dementia risk factors, including physical inactivity, low education, hearing loss, high blood pressure, social isolation and depression. Exercise, learning new skills, and time with people protect the brain more than any game.</li>
+      </ul>
+      <p>Sources: <a href="https://alz-journals.onlinelibrary.wiley.com/doi/10.1002/trc2.70197" target="_blank" rel="noopener">ACTIVE 20-year follow-up (2026)</a> · <a href="https://link.springer.com/article/10.3758/s13423-016-1217-0" target="_blank" rel="noopener">n-back training meta-analysis</a> · <a href="https://www.alzheimer-europe.org/news/2024-lancet-commission-underscores-potential-dementia-risk-reduction-identifying-14-modifiable?language_content_entity=en" target="_blank" rel="noopener">Lancet Commission 2024</a></p>
+      <p>This is a game, not a medical test. If you're worried about your memory, talk to a doctor.</p>
+    </details>
+  </div>`);
+  document.getElementById('go').onclick = () => workout(EX.map(e => e.id), []);
+  document.querySelectorAll('.tile').forEach(t => t.onclick = () => workout([t.dataset.id], []));
+}
+
+function intro(ex, step, total) {
+  return new Promise(res => {
+    h(`<div class="stack">
+      <div class="hud"><span>${total > 1 ? `Exercise <b>${step}</b> of ${total}` : 'Practice'}</span><button class="quit" id="quit">✕ Quit</button></div>
+      <div class="center" style="font-size:56px;margin-top:20px">${ex.icon}</div>
+      <h2 class="center">${ex.name}</h2>
+      <p class="center muted" style="margin-top:0">Trains: ${ex.trains}</p>
+      <div class="card"><p style="margin:0">${ex.how}</p></div>
+      <button class="btn" id="start">Start</button>
+    </div>`);
+    document.getElementById('quit').onclick = home;
+    document.getElementById('start').onclick = res;
+  });
+}
+
+async function workout(queue, results) {
+  const total = queue.length + results.length;
+  for (const id of queue) {
+    const ex = byId(id);
+    await intro(ex, results.length + 1, total);
+    run = { alive: true };
+    let r;
+    try { r = await ex.play(); }
+    catch (e) { if (e === ABORT) return; throw e; }
+    if (!run.alive) return;
+    const old = data.best[id];
+    r.newBest = isBetter(ex, r.score, old) && !(ex.id === 'memory' && r.score === 0);
+    r.prev = old;
+    if (r.newBest) data.best[id] = r.score;
+    data.hist.push({ d: today(), ex: id, s: r.score });
+    if (data.hist.length > 400) data.hist = data.hist.slice(-400);
+    if (!data.days.includes(today())) data.days.push(today());
+    save();
+    results.push({ ex, ...r });
+    run.alive = false;
+    if (results.length < total) await between(results[results.length - 1]);
+  }
+  summary(results);
+}
+
+function between(r) {
+  return new Promise(res => {
+    h(`<div class="stack center">
+      <div style="font-size:48px;margin-top:30px">${r.ex.icon}</div>
+      <h2>${r.ex.name}</h2>
+      <div class="big">${r.ex.fmt(r.score)}</div>
+      ${r.newBest ? '<span class="badge">★ Personal best</span>' : r.prev !== undefined ? `<p class="muted">Best: ${r.ex.fmt(r.prev)}</p>` : ''}
+      <p class="muted">${r.sub}</p>
+      <button class="btn" id="next">Next exercise →</button>
+    </div>`);
+    document.getElementById('next').onclick = res;
+  });
+}
+
+function summary(results) {
+  const one = results.length === 1;
+  const st = streak();
+  h(`<div class="stack">
+    <div class="center"><div style="font-size:56px;margin-top:16px">${one ? results[0].ex.icon : '🎉'}</div>
+      <h2>${one ? results[0].ex.name : 'Workout done!'}</h2>
+      <p class="muted" style="margin-top:0">${st > 1 ? `${st}-day streak — come back tomorrow to keep it going.` : 'Come back tomorrow — regular practice is what counts.'}</p></div>
+    <div class="card">${results.map(r => `<div class="res"><div><b>${r.ex.icon} ${r.ex.name}</b><div class="muted" style="font-size:13px;margin-top:2px">${r.sub}</div></div>
+      <div class="score"><b style="white-space:nowrap">${r.ex.fmt(r.score)}</b>${r.newBest ? '<span class="badge">★ Best</span>' : ''}</div></div>`).join('')}</div>
+    ${one ? `<div class="row"><button class="btn ghost" id="home">Home</button><button class="btn" id="again">Again</button></div>` : `<button class="btn" id="home">Done</button>`}
+  </div>`);
+  document.getElementById('home').onclick = home;
+  if (one) document.getElementById('again').onclick = () => workout([results[0].ex.id], []);
+}
+
+addEventListener('keydown', e => { if (e.code === 'Escape') location.href = '../'; });
+home();
+</script>
+</body>
+</html>

@@ -35,7 +35,7 @@
   h1 span { background: linear-gradient(90deg, #7ac8ff, #c48bff 50%, #ff6fb5); -webkit-background-clip: text; background-clip: text; color: transparent; }
   header p { color: var(--muted); font-size: 17px; margin: 0; line-height: 1.5; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 780px; margin: 0 auto; }
   .card {
     display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 20px;
     overflow: hidden; text-decoration: none; color: inherit; transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
@@ -62,15 +62,18 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes slide { from { transform: translateX(-40px); } to { transform: translateX(40px); } }
   @keyframes hop { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-46px) rotate(180deg); } }
+  .blink1, .blink2, .blink3, .blink4 { animation: blink 2.4s infinite; opacity: 0.25; }
+  .blink2 { animation-delay: 0.6s; } .blink3 { animation-delay: 1.2s; } .blink4 { animation-delay: 1.8s; }
+  @keyframes blink { 0%, 30%, 100% { opacity: 0.25; } 8%, 22% { opacity: 1; } }
   @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-80px); } }
-  @media (prefers-reduced-motion: reduce) { .spin, .slide, .hop, .scroll { animation: none; } .card { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .spin, .slide, .hop, .scroll, .blink1, .blink2, .blink3, .blink4 { animation: none; } .card { transition: none; } }
 </style>
 </head>
 <body>
 <header>
-  <div class="badge">3 games · 1 button</div>
+  <div class="badge">3 games + a brain gym</div>
   <h1><span>Mini Arcade</span></h1>
-  <p>Small games you can play in your browser on a phone or laptop. Pick one and beat your best score.</p>
+  <p>Small games you can play in your browser on a phone or laptop. Pick one and beat your best score, or do a quick daily brain workout.</p>
 </header>
 
 <main class="grid">
@@ -133,12 +136,43 @@
       <div class="meta"><span class="best" data-key="neonDashBest"></span><span class="play">Play</span></div>
     </div>
   </a>
+  <a class="card" href="brain-gym/" style="--accent:#3dd6b0">
+    <div class="art" style="background: radial-gradient(circle at 50% 30%, #16304a, #0e1324)">
+      <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <g transform="translate(112 42)">
+          <rect x="0" y="0" width="22" height="22" rx="5" fill="#212b4b"/><rect x="26" y="0" width="22" height="22" rx="5" fill="#3dd6b0" class="blink1"/><rect x="52" y="0" width="22" height="22" rx="5" fill="#212b4b"/><rect x="78" y="0" width="22" height="22" rx="5" fill="#212b4b"/>
+          <rect x="0" y="26" width="22" height="22" rx="5" fill="#212b4b"/><rect x="26" y="26" width="22" height="22" rx="5" fill="#212b4b"/><rect x="52" y="26" width="22" height="22" rx="5" fill="#3dd6b0" class="blink2"/><rect x="78" y="26" width="22" height="22" rx="5" fill="#212b4b"/>
+          <rect x="0" y="52" width="22" height="22" rx="5" fill="#3dd6b0" class="blink3"/><rect x="26" y="52" width="22" height="22" rx="5" fill="#212b4b"/><rect x="52" y="52" width="22" height="22" rx="5" fill="#212b4b"/><rect x="78" y="52" width="22" height="22" rx="5" fill="#212b4b"/>
+          <rect x="0" y="78" width="22" height="22" rx="5" fill="#212b4b"/><rect x="26" y="78" width="22" height="22" rx="5" fill="#212b4b"/><rect x="52" y="78" width="22" height="22" rx="5" fill="#212b4b"/><rect x="78" y="78" width="22" height="22" rx="5" fill="#3dd6b0" class="blink4"/>
+        </g>
+        <text x="40" y="70" font-size="30" font-weight="900" fill="#ff5a5f" font-family="system-ui, sans-serif">BLUE</text>
+        <text x="236" y="120" font-size="44" font-weight="900" fill="#ff9f43" font-family="system-ui, sans-serif">7</text>
+        <path d="M262 40l4 9 10 1-7.5 6.5 2.2 9.8L262 61l-8.7 5.3 2.2-9.8L248 50l10-1z" fill="#ffd23f"/>
+      </svg>
+    </div>
+    <div class="body">
+      <h2>Brain Gym</h2>
+      <p>A 5-minute daily workout for speed, memory, focus and flexibility. Every exercise adapts to your level.</p>
+      <div class="meta"><span class="best" data-gym></span><span class="play">Train</span></div>
+    </div>
+  </a>
 </main>
 
 <footer>Tap or press <kbd>Space</kbd> to play · <kbd>M</kbd> mutes · <kbd>Esc</kbd> comes back here</footer>
 
 <script>
-  document.querySelectorAll('.best').forEach(el => {
+  document.querySelectorAll('[data-gym]').forEach(el => {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem('brainGymData')); } catch (e) {}
+    const days = new Set((d && d.days) || []), t = new Date();
+    const f = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+    if (!days.has(f(t))) t.setDate(t.getDate() - 1);
+    let n = 0; while (days.has(f(t))) { n++; t.setDate(t.getDate() - 1); }
+    if (n) el.textContent = '🔥 ' + n + '-day streak';
+    else if (days.size) el.textContent = 'Train today to start a streak';
+    else { el.textContent = 'Not trained yet'; el.classList.add('none'); }
+  });
+  document.querySelectorAll('.best[data-key]').forEach(el => {
     let v = 0;
     try { v = +localStorage.getItem(el.dataset.key) || 0; } catch (e) {}
     if (v) el.textContent = '★ Best ' + v;
