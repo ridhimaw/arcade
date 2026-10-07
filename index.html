@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Mini Arcade — three small one-button games you can play in your browser.">
+<title>Mini Arcade</title>
+<style>
+  :root {
+    --bg: #0c0b1d;
+    --card: #17152f;
+    --line: rgba(255,255,255,0.09);
+    --text: #f1efff;
+    --muted: #a7a3c9;
+    --gold: #ffd479;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #2a1f5c 0%, transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 56px 16px 40px;
+  }
+  header { text-align: center; max-width: 640px; margin: 0 auto 40px; }
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--gold); border: 1px solid rgba(255,212,121,0.35); border-radius: 999px; padding: 5px 12px; margin-bottom: 18px;
+  }
+  h1 { font-size: clamp(40px, 8vw, 64px); line-height: 1; margin: 0 0 14px; font-weight: 900; letter-spacing: -0.02em; }
+  h1 span { background: linear-gradient(90deg, #7ac8ff, #c48bff 50%, #ff6fb5); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header p { color: var(--muted); font-size: 17px; margin: 0; line-height: 1.5; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto; }
+  .card {
+    display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    overflow: hidden; text-decoration: none; color: inherit; transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover, .card:focus-visible { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 16px 40px -16px var(--accent); outline: none; }
+  .art { height: 180px; position: relative; overflow: hidden; }
+  .art svg { width: 100%; height: 100%; display: block; }
+  .body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .body h2 { margin: 0; font-size: 22px; font-weight: 800; }
+  .body p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.45; flex: 1; }
+  .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .best { font-size: 13px; font-weight: 700; color: var(--gold); }
+  .best.none { color: var(--muted); font-weight: 500; }
+  .play { font-size: 14px; font-weight: 800; padding: 9px 18px; border-radius: 999px; background: var(--accent); color: #0c0b1d; }
+
+  footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 44px; }
+  kbd { font: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; background: rgba(255,255,255,0.05); }
+
+  /* gentle motion in the card art */
+  .spin { transform-origin: 160px 90px; animation: spin 6s linear infinite; }
+  .slide { animation: slide 2.4s ease-in-out infinite alternate; }
+  .hop { animation: hop 1s cubic-bezier(.3,0,.7,1) infinite; transform-box: fill-box; transform-origin: center; }
+  .scroll { animation: scroll 1.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes slide { from { transform: translateX(-40px); } to { transform: translateX(40px); } }
+  @keyframes hop { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-46px) rotate(180deg); } }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-80px); } }
+  @media (prefers-reduced-motion: reduce) { .spin, .slide, .hop, .scroll { animation: none; } .card { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="badge">3 games · 1 button</div>
+  <h1><span>Mini Arcade</span></h1>
+  <p>Small games you can play in your browser on a phone or laptop. Pick one and beat your best score.</p>
+</header>
+
+<main class="grid">
+  <a class="card" href="orbit-hop/" style="--accent:#77ccff">
+    <div class="art" style="background: radial-gradient(circle at 50% 50%, #1d1740, #07061a)">
+      <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <circle cx="160" cy="90" r="38" fill="none" stroke="rgba(140,160,255,0.35)" stroke-width="2"/>
+        <circle cx="160" cy="90" r="66" fill="none" stroke="rgba(140,160,255,0.6)" stroke-width="2"/>
+        <rect x="216" y="44" width="14" height="14" fill="#ff4d6d" transform="rotate(25 223 51)"/>
+        <rect x="112" y="112" width="12" height="12" fill="#ff4d6d" transform="rotate(10 118 118)"/>
+        <path d="M120 60 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#ffd166"/>
+        <g class="spin"><circle cx="160" cy="24" r="8" fill="#e8f7ff"/><circle cx="160" cy="24" r="14" fill="rgba(119,204,255,0.25)"/></g>
+      </svg>
+    </div>
+    <div class="body">
+      <h2>Orbit Hop</h2>
+      <p>Circle around two rings. Tap to switch rings, grab the stars and dodge the red blocks.</p>
+      <div class="meta"><span class="best" data-key="orbitHopBest"></span><span class="play">Play</span></div>
+    </div>
+  </a>
+
+  <a class="card" href="skyline-stack/" style="--accent:#c48bff">
+    <div class="art" style="background: linear-gradient(#1f2350, #57306e)">
+      <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <rect x="0" y="164" width="320" height="16" fill="#0b0d1c"/>
+        <rect x="100" y="140" width="120" height="24" fill="hsl(150,62%,58%)"/>
+        <rect x="104" y="116" width="112" height="24" fill="hsl(175,62%,58%)"/>
+        <rect x="110" y="92" width="100" height="24" fill="hsl(200,62%,58%)"/>
+        <rect x="116" y="68" width="88" height="24" fill="hsl(230,62%,62%)"/>
+        <g class="slide"><rect x="116" y="30" width="88" height="24" fill="hsl(275,62%,64%)"/></g>
+      </svg>
+    </div>
+    <div class="body">
+      <h2>Skyline Stack</h2>
+      <p>Drop each sliding floor on top of the last one. Whatever hangs over gets cut off. How high can you build?</p>
+      <div class="meta"><span class="best" data-key="skylineStackBest"></span><span class="play">Play</span></div>
+    </div>
+  </a>
+
+  <a class="card" href="neon-dash/" style="--accent:#ff6fb5">
+    <div class="art" style="background: linear-gradient(#12052b, #4a0f5c)">
+      <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs><clipPath id="sun"><circle cx="230" cy="122" r="44"/></clipPath>
+          <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd36e"/><stop offset="1" stop-color="#ff3d8b"/></linearGradient></defs>
+        <g clip-path="url(#sun)"><rect x="186" y="78" width="88" height="88" fill="url(#sg)"/>
+          <rect x="186" y="118" width="88" height="3" fill="#3a0c50"/><rect x="186" y="126" width="88" height="4" fill="#3a0c50"/></g>
+        <rect x="0" y="136" width="320" height="44" fill="#12052b"/>
+        <line x1="0" y1="136" x2="320" y2="136" stroke="#ff7bd0" stroke-width="2"/>
+        <g class="scroll">
+          <rect x="190" y="106" width="22" height="30" fill="#2a0b3f" stroke="#ff4fb4" stroke-width="2"/>
+          <rect x="270" y="114" width="30" height="22" fill="#2a0b3f" stroke="#ff4fb4" stroke-width="2"/>
+          <circle cx="150" cy="80" r="5" fill="#ffe066"/><circle cx="170" cy="70" r="5" fill="#ffe066"/><circle cx="190" cy="72" r="5" fill="#ffe066"/>
+        </g>
+        <rect class="hop" x="70" y="114" width="22" height="22" fill="#7af7ff"/>
+      </svg>
+    </div>
+    <div class="body">
+      <h2>Neon Dash</h2>
+      <p>An endless runner. Jump the blocks, tap twice to double-jump and collect coins for bonus points.</p>
+      <div class="meta"><span class="best" data-key="neonDashBest"></span><span class="play">Play</span></div>
+    </div>
+  </a>
+</main>
+
+<footer>Tap or press <kbd>Space</kbd> to play · <kbd>M</kbd> mutes · <kbd>Esc</kbd> comes back here</footer>
+
+<script>
+  document.querySelectorAll('.best').forEach(el => {
+    let v = 0;
+    try { v = +localStorage.getItem(el.dataset.key) || 0; } catch (e) {}
+    if (v) el.textContent = '★ Best ' + v;
+    else { el.textContent = 'Not played yet'; el.classList.add('none'); }
+  });
+</script>
+</body>
+</html>

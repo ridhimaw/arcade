@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="description" content="Skyline Stack — a one-tap tower stacking game. Drop each floor right on top of the last one.">
+<title>Skyline Stack</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #10142a; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+  canvas { display: block; cursor: pointer; }
+  .home { position: fixed; left: 12px; bottom: 12px; padding: 8px 14px; border-radius: 999px; font: 600 13px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: #eef0ff; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); text-decoration: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .home:hover { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<a class="home" href="../">← All games</a>
+<script>
+const c = document.getElementById('c'), g = c.getContext('2d');
+const FONT = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+
+// ---------- Layout ----------
+let W, H, U, BH, baseW, stars = [];
+function resize() {
+  const d = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  c.width = W * d; c.height = H * d;
+  c.style.width = W + 'px'; c.style.height = H + 'px';
+  g.setTransform(d, 0, 0, d, 0, 0);
+  U = Math.max(0.8, Math.min(1.5, Math.min(W, H) / 600));
+  BH = 30 * U;
+  baseW = Math.min(W * 0.55, 280 * U);
+  stars = [];
+  for (let i = 0; i < 80; i++) stars.push({ x: Math.random() * W, y: Math.random() * H * 3, s: Math.random() * 1.6 + 0.3, p: Math.random() * 6 });
+}
+addEventListener('resize', () => { resize(); if (state === 'menu') reset(); });
+resize();
+
+// ---------- Storage & sound ----------
+let best = 0;
+try { best = +localStorage.getItem('skylineStackBest') || 0; } catch (e) {}
+function saveBest() { try { localStorage.setItem('skylineStackBest', best); } catch (e) {} }
+
+let ac = null, muted = false;
+function beep(f, d, type = 'sine', v = 0.08, slide = 0) {
+  if (muted) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), gn = ac.createGain(), t = ac.currentTime;
+    o.type = type;
+    o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
+    gn.gain.setValueAtTime(v, t);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(gn).connect(ac.destination);
+    o.start(t); o.stop(t + d);
+  } catch (e) {}
+}
+// Notes of a pentatonic scale, so perfect drops play a rising tune
+const SCALE = [0, 2, 4, 7, 9];
+function note(i) { return 330 * Math.pow(2, (SCALE[i % 5] + 12 * Math.floor(i / 5)) / 12); }
+
+// ---------- Game state ----------
+// World y: 0 is the ground; block i sits with its top at -(i+1)*BH
+let state = 'menu', tower = [], cur = null, falling = [], parts = [], rings = [], popups = [];
+let score = 0, combo = 0, cam = 0, camT = 0, time = 0, deadT = 0, shake = 0, newBest = false, hue0 = 0;
+
+function hueAt(i) { return (hue0 + i * 9) % 360; }
+function screenY(wy) { return H * 0.78 + wy + cam; }
+
+function reset() {
+  hue0 = Math.random() * 360;
+  tower = [{ x: W / 2 - baseW / 2, w: baseW, hue: hueAt(0) }];
+  falling = []; parts = []; rings = []; popups = [];
+  score = 0; combo = 0; cam = 0; camT = 0; newBest = false;
+  cur = null;
+}
+reset();
+
+function spawn() {
+  const top = tower[tower.length - 1], i = tower.length;
+  const range = Math.max(baseW * 0.95, W * 0.32);
+  const fromLeft = i % 2 === 1;
+  const speed = Math.min(560, 170 + score * 7) * U;
+  cur = { w: top.w, x: fromLeft ? W / 2 - range - top.w / 2 : W / 2 + range - top.w / 2, dir: fromLeft ? 1 : -1, speed, range, hue: hueAt(i) };
+}
+
+function start() { reset(); state = 'play'; spawn(); beep(392, 0.1, 'triangle', 0.06, 588); }
+
+function burst(x, y, hue, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = (60 + Math.random() * 180) * U, life = 0.4 + Math.random() * 0.5;
+    parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 80 * U, life, max: life, hue });
+  }
+}
+
+function drop() {
+  const top = tower[tower.length - 1], i = tower.length;
+  const wy = -(i + 1) * BH;
+  const L = Math.max(cur.x, top.x), R = Math.min(cur.x + cur.w, top.x + top.w);
+
+  if (R - L <= 0) { // missed completely
+    falling.push({ x: cur.x, y: wy, w: cur.w, vy: 0, rot: 0, vr: (Math.random() - 0.5) * 3, hue: cur.hue });
+    cur = null; gameOver(); return;
+  }
+
+  const tol = 5 * U;
+  if (Math.abs(cur.x - top.x) <= tol) { // perfect
+    combo++;
+    let w = top.w, x = top.x;
+    if (combo >= 3 && w < baseW) { const grow = Math.min(10 * U, baseW - w); w += grow; x -= grow / 2; }
+    tower.push({ x, w, hue: cur.hue });
+    rings.push({ x: x + w / 2, y: wy + BH / 2, w, t: 0 });
+    popups.push({ text: combo >= 3 ? 'PERFECT ×' + combo : 'PERFECT', y: wy, t: 0 });
+    beep(note(Math.min(combo - 1, 14)), 0.18, 'triangle', 0.08);
+  } else {
+    combo = 0;
+    // the overhanging part falls off
+    if (cur.x < L) falling.push({ x: cur.x, y: wy, w: L - cur.x, vy: 0, rot: 0, vr: -(1 + Math.random() * 2), hue: cur.hue });
+    if (cur.x + cur.w > R) falling.push({ x: R, y: wy, w: cur.x + cur.w - R, vy: 0, rot: 0, vr: 1 + Math.random() * 2, hue: cur.hue });
+    tower.push({ x: L, w: R - L, hue: cur.hue });
+    beep(200 + Math.min(score, 30) * 8, 0.08, 'square', 0.04);
+  }
+  score++;
+  shake = 3;
+  burst(cur.x + cur.w / 2, screenY(wy + BH), cur.hue, 6);
+  camT = Math.max(0, tower.length * BH - H * 0.4);
+  spawn();
+}
+
+function gameOver() {
+  state = 'over'; deadT = 0; shake = 10;
+  beep(260, 0.5, 'sawtooth', 0.07, 70);
+  if (score > best) { best = score; saveBest(); newBest = true; }
+}
+
+function act() {
+  if (state === 'menu') return start();
+  if (state === 'over') { if (deadT > 0.6) start(); return; }
+  if (cur) drop();
+}
+
+c.addEventListener('pointerdown', e => { e.preventDefault(); act(); });
+addEventListener('keydown', e => {
+  if (e.code === 'KeyM') { muted = !muted; return; }
+  if (e.code === 'Escape') { location.href = '../'; return; }
+  if (['Space', 'Enter', 'ArrowDown'].includes(e.code)) {
+    e.preventDefault();
+    if (!e.repeat) act();
+  }
+});
+
+// ---------- Update ----------
+function update(dt) {
+  time += dt;
+  shake = Math.max(0, shake - dt * 30);
+
+  if (cur && state === 'play') {
+    cur.x += cur.dir * cur.speed * dt;
+    const lo = W / 2 - cur.range - cur.w / 2, hi = W / 2 + cur.range - cur.w / 2;
+    if (cur.x < lo) { cur.x = lo; cur.dir = 1; }
+    if (cur.x > hi) { cur.x = hi; cur.dir = -1; }
+  }
+
+  if (state === 'over') {
+    deadT += dt;
+    // pull the camera back so the whole tower is visible
+    const towerH = tower.length * BH;
+    camT = towerH > H * 0.6 ? towerH - H * 0.6 : 0;
+  }
+  cam += (camT - cam) * Math.min(1, dt * 5);
+
+  for (const f of falling) { f.vy += 1400 * U * dt; f.y += f.vy * dt; f.rot += f.vr * dt; }
+  falling = falling.filter(f => screenY(f.y) < H + 200);
+  for (const p of parts) { p.vy += 500 * U * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+  parts = parts.filter(p => p.life > 0);
+  for (const r of rings) r.t += dt;
+  rings = rings.filter(r => r.t < 0.5);
+  for (const p of popups) p.t += dt;
+  popups = popups.filter(p => p.t < 0.9);
+}
+
+// ---------- Draw ----------
+function block(x, y, w, hue, alpha = 1) {
+  g.globalAlpha = alpha;
+  g.fillStyle = `hsl(${hue},62%,58%)`;
+  g.fillRect(x, y, w, BH);
+  g.fillStyle = `hsl(${hue},70%,72%)`;
+  g.fillRect(x, y, w, 5 * U);
+  g.fillStyle = `hsl(${hue},55%,44%)`;
+  g.fillRect(x, y + BH - 4 * U, w, 4 * U);
+  // windows
+  if (w > 24 * U) {
+    g.fillStyle = `hsla(${hue},80%,90%,0.35)`;
+    const n = Math.floor((w - 8 * U) / (16 * U));
+    const gap = (w - n * 8 * U) / (n + 1);
+    for (let k = 0; k < n; k++) g.fillRect(x + gap + k * (8 * U + gap), y + 10 * U, 8 * U, 10 * U);
+  }
+  g.globalAlpha = 1;
+}
+
+function text(str, x, y, size, color, weight = 700) {
+  g.font = `${weight} ${Math.round(size)}px ${FONT}`;
+  g.fillStyle = color; g.fillText(str, x, y);
+}
+
+function draw() {
+  // sky changes from dusk to night as the tower grows
+  const h = tower.length;
+  const k = Math.min(1, h / 40);
+  const grd = g.createLinearGradient(0, 0, 0, H);
+  grd.addColorStop(0, `hsl(${235 - k * 10},${45 - k * 10}%,${18 - k * 8}%)`);
+  grd.addColorStop(1, `hsl(${280 - k * 40},${45 - k * 15}%,${34 - k * 20}%)`);
+  g.fillStyle = grd; g.fillRect(0, 0, W, H);
+
+  g.fillStyle = '#e6e9ff';
+  for (const s of stars) {
+    const y = (s.y + cam * 0.3) % (H * 3) - H * 2 + H;
+    if (y < 0 || y > H) continue;
+    g.globalAlpha = (0.3 + 0.4 * Math.sin(time * 2 + s.p)) * (0.4 + k * 0.6);
+    g.fillRect(s.x, y, s.s, s.s);
+  }
+  g.globalAlpha = 1;
+
+  g.save();
+  if (shake > 0) g.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+  // ground
+  const gy = screenY(0);
+  if (gy < H) { g.fillStyle = '#0b0d1c'; g.fillRect(-20, gy, W + 40, H - gy + 20); }
+
+  // tower
+  for (let i = 0; i < tower.length; i++) {
+    const b = tower[i], y = screenY(-(i + 1) * BH);
+    if (y > H || y < -BH) continue;
+    block(b.x, y, b.w, b.hue);
+  }
+
+  // moving block
+  if (cur && state === 'play') block(cur.x, screenY(-(tower.length + 1) * BH), cur.w, cur.hue);
+
+  // falling pieces
+  for (const f of falling) {
+    g.save();
+    g.translate(f.x + f.w / 2, screenY(f.y) + BH / 2); g.rotate(f.rot);
+    block(-f.w / 2, -BH / 2, f.w, f.hue, 0.9);
+    g.restore();
+  }
+
+  // perfect rings
+  for (const r of rings) {
+    const p = r.t / 0.5, pad = p * 22 * U;
+    g.strokeStyle = `rgba(255,255,255,${1 - p})`; g.lineWidth = 2 * U;
+    g.strokeRect(r.x - r.w / 2 - pad, screenY(r.y) - BH / 2 - pad, r.w + pad * 2, BH + pad * 2);
+  }
+
+  for (const p of parts) {
+    g.globalAlpha = Math.max(0, p.life / p.max);
+    g.fillStyle = `hsl(${p.hue},80%,75%)`;
+    g.fillRect(p.x - 2 * U, p.y - 2 * U, 4 * U, 4 * U);
+  }
+  g.globalAlpha = 1;
+
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const p of popups) {
+    const a = 1 - p.t / 0.9;
+    text(p.text, W / 2, screenY(p.y) - 30 * U - p.t * 40 * U, 18 * U, `rgba(255,255,255,${a})`, 800);
+  }
+  g.restore();
+
+  // UI
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (state === 'menu') {
+    text('SKYLINE STACK', W / 2, H * 0.2, 40 * U, '#f4f2ff', 800);
+    text('Drop each floor right on top of the last', W / 2, H * 0.2 + 38 * U, 15 * U, 'rgba(244,242,255,0.7)', 500);
+    const pulse = 0.6 + 0.4 * Math.sin(time * 4);
+    text('Tap or press Space to start', W / 2, H * 0.92, 16 * U, `rgba(244,242,255,${pulse})`, 600);
+    if (best) text('Best: ' + best, W / 2, H * 0.92 - 28 * U, 14 * U, '#ffd479', 600);
+  } else {
+    text(score, W / 2, 56 * U, 52 * U, 'rgba(255,255,255,0.92)', 800);
+    if (state === 'play') {
+      g.textAlign = 'left';
+      text('Best ' + best, 16, 22, 13 * U, 'rgba(244,242,255,0.55)', 600);
+    }
+  }
+  if (state === 'over' && deadT > 0.4) {
+    g.fillStyle = 'rgba(10,10,25,0.45)'; g.fillRect(0, 0, W, H);
+    g.textAlign = 'center';
+    text(score + (score === 1 ? ' floor' : ' floors'), W / 2, H * 0.35, 40 * U, '#ffffff', 800);
+    text(newBest ? '★ New best!' : 'Best ' + best, W / 2, H * 0.35 + 40 * U, 18 * U, '#ffd479', 600);
+    if (deadT > 0.6) {
+      const pulse = 0.6 + 0.4 * Math.sin(time * 4);
+      text('Tap or press Space to build again', W / 2, H * 0.35 + 84 * U, 16 * U, `rgba(244,242,255,${pulse})`, 600);
+    }
+  }
+  if (muted) { g.textAlign = 'right'; text('muted (M)', W - 16, 22, 13 * U, 'rgba(244,242,255,0.55)', 600); }
+}
+
+// ---------- Loop ----------
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.033, (now - last) / 1000);
+  last = now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
