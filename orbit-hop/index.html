@@ -31,6 +31,8 @@
 <body>
 <canvas id="c"></canvas>
 <a class="home" href="../">← All games</a>
+<script src="../leaderboard.js"></script>
+<script>LB.init({ accent: '#77ccff', boards: [{ id: 'orbit-hop', label: 'Orbit Hop' }] });</script>
 <script>
 const c = document.getElementById('c'), g = c.getContext('2d');
 const TAU = Math.PI * 2;
@@ -41,7 +43,7 @@ const TAP = matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Tap or press Spac
 let W, H, cx, cy, R = [0, 0], U = 1, bg = [];
 function resize() {
   const d = Math.min(window.devicePixelRatio || 1, 2);
-  W = innerWidth; H = innerHeight;
+  W = innerWidth - (window.LB ? LB.side() : 0); H = innerHeight;
   c.width = W * d; c.height = H * d;
   c.style.width = W + 'px'; c.style.height = H + 'px';
   g.setTransform(d, 0, 0, d, 0, 0);
@@ -122,9 +124,10 @@ function die(x, y) {
   burst(x, y, '#ff4d6d', 40); burst(x, y, '#ffffff', 12);
   beep(220, 0.5, 'sawtooth', 0.08, 60);
   if (score > best) { best = score; saveBest(); newBest = true; }
+  LB.offer(score);
 }
 
-function start() { reset(); state = 'play'; beep(440, 0.1, 'triangle', 0.06, 660); }
+function start() { LB.clearOffer(); reset(); state = 'play'; beep(440, 0.1, 'triangle', 0.06, 660); }
 
 function act() {
   if (state === 'menu') return start();
@@ -135,6 +138,7 @@ function act() {
 
 c.addEventListener('pointerdown', e => { e.preventDefault(); act(); });
 addEventListener('keydown', e => {
+  if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.code === 'KeyM') { muted = !muted; return; }
   if (e.code === 'Escape') { location.href = '../'; return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'Enter', 'KeyW', 'KeyS'].includes(e.code)) {

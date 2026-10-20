@@ -118,6 +118,13 @@
 </head>
 <body>
 <main id="app"></main>
+<script src="../leaderboard.js"></script>
+<script>LB.init({ accent: '#3dd6b0', pageShift: true, boards: [
+  { id: 'bg-speed', label: '⚡ Speed', lower: true, fmt: s => s + ' ms' },
+  { id: 'bg-memory', label: '🧩 Memory', fmt: s => s + ' sq' },
+  { id: 'bg-stroop', label: '🎨 Clash', fmt: s => s + ' pts' },
+  { id: 'bg-switch', label: '🔀 Switch', fmt: s => s + ' pts' }
+] });</script>
 <script>
 // ================= Storage =================
 const KEY = 'brainGymData';
@@ -438,6 +445,7 @@ async function workout(queue, results) {
     r.prev = old;
     if (r.newBest) data.best[id] = r.score;
     data.hist.push({ d: today(), ex: id, s: r.score });
+    LB.offer(r.score, 'bg-' + id, ex.name);
     if (data.hist.length > 400) data.hist = data.hist.slice(-400);
     if (!data.days.includes(today())) data.days.push(today());
     save();
@@ -477,7 +485,7 @@ function summary(results) {
   if (one) document.getElementById('again').onclick = () => workout([results[0].ex.id], []);
 }
 
-addEventListener('keydown', e => { if (e.code === 'Escape') location.href = '../'; });
+addEventListener('keydown', e => { if (e.code === 'Escape' && !/INPUT|TEXTAREA/.test(e.target.tagName)) location.href = '../'; });
 home();
 </script>
 </body>

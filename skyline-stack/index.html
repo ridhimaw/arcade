@@ -31,6 +31,8 @@
 <body>
 <canvas id="c"></canvas>
 <a class="home" href="../">← All games</a>
+<script src="../leaderboard.js"></script>
+<script>LB.init({ accent: '#c48bff', boards: [{ id: 'skyline-stack', label: 'Skyline Stack' }] });</script>
 <script>
 const c = document.getElementById('c'), g = c.getContext('2d');
 const FONT = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
@@ -40,7 +42,7 @@ const TAP = matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Tap or press Spac
 let W, H, U, BH, baseW, stars = [];
 function resize() {
   const d = Math.min(window.devicePixelRatio || 1, 2);
-  W = innerWidth; H = innerHeight;
+  W = innerWidth - (window.LB ? LB.side() : 0); H = innerHeight;
   c.width = W * d; c.height = H * d;
   c.style.width = W + 'px'; c.style.height = H + 'px';
   g.setTransform(d, 0, 0, d, 0, 0);
@@ -102,7 +104,7 @@ function spawn() {
   cur = { w: top.w, x: fromLeft ? W / 2 - range - top.w / 2 : W / 2 + range - top.w / 2, dir: fromLeft ? 1 : -1, speed, range, hue: hueAt(i) };
 }
 
-function start() { reset(); state = 'play'; spawn(); beep(392, 0.1, 'triangle', 0.06, 588); }
+function start() { LB.clearOffer(); reset(); state = 'play'; spawn(); beep(392, 0.1, 'triangle', 0.06, 588); }
 
 function burst(x, y, hue, n) {
   for (let i = 0; i < n; i++) {
@@ -149,6 +151,7 @@ function gameOver() {
   state = 'over'; deadT = 0; shake = 10;
   beep(260, 0.5, 'sawtooth', 0.07, 70);
   if (score > best) { best = score; saveBest(); newBest = true; }
+  LB.offer(score);
 }
 
 function act() {
@@ -159,6 +162,7 @@ function act() {
 
 c.addEventListener('pointerdown', e => { e.preventDefault(); act(); });
 addEventListener('keydown', e => {
+  if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.code === 'KeyM') { muted = !muted; return; }
   if (e.code === 'Escape') { location.href = '../'; return; }
   if (['Space', 'Enter', 'ArrowDown'].includes(e.code)) {

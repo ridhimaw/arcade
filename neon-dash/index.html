@@ -31,6 +31,8 @@
 <body>
 <canvas id="c"></canvas>
 <a class="home" href="../">← All games</a>
+<script src="../leaderboard.js"></script>
+<script>LB.init({ accent: '#ff6fb5', boards: [{ id: 'neon-dash', label: 'Neon Dash' }] });</script>
 <script>
 const c = document.getElementById('c'), g = c.getContext('2d');
 const FONT = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
@@ -40,7 +42,7 @@ const TAP = matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Tap or press Spac
 let W, H, U, groundY, hills = [];
 function resize() {
   const d = Math.min(window.devicePixelRatio || 1, 2);
-  W = innerWidth; H = innerHeight;
+  W = innerWidth - (window.LB ? LB.side() : 0); H = innerHeight;
   c.width = W * d; c.height = H * d;
   c.style.width = W + 'px'; c.style.height = H + 'px';
   g.setTransform(d, 0, 0, d, 0, 0);
@@ -116,7 +118,7 @@ function spawn() {
   nextGap = speed * air * (1.15 + Math.random() * 1.1) + 60 * U;
 }
 
-function start() { reset(); state = 'play'; beep(330, 0.1, 'triangle', 0.06, 660); }
+function start() { LB.clearOffer(); reset(); state = 'play'; beep(330, 0.1, 'triangle', 0.06, 660); }
 
 function jump() {
   if (pl.jumps >= 2) return;
@@ -144,11 +146,13 @@ function die() {
   beep(200, 0.6, 'sawtooth', 0.08, 50);
   const s = score();
   if (s > best) { best = s; saveBest(); newBest = true; }
+  LB.offer(s);
 }
 
 c.addEventListener('pointerdown', e => { e.preventDefault(); act(); });
 addEventListener('pointerup', release);
 addEventListener('keydown', e => {
+  if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.code === 'KeyM') { muted = !muted; return; }
   if (e.code === 'Escape') { location.href = '../'; return; }
   if (['Space', 'ArrowUp', 'KeyW', 'Enter'].includes(e.code)) {
